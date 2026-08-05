@@ -203,7 +203,7 @@ No — it is obfuscated, but that is basic protection only. Use your own Keychai
 
 ### 📄 License
 
-**No license.** This is a vibe-coding project — no open-source license is granted. All rights reserved by default; please contact the author before reusing any part of it.
+**No license — no rights reserved.** This is a vibe-coding project released for free use. Use, modify, and redistribute it for any purpose, without any restrictions.
 
 ### 🙏 Credits
 
@@ -408,7 +408,7 @@ SFTP 文件传输计划在下个版本提供；端口转发现在已经支持。
 
 ### 📄 许可证
 
-**无许可证。** 本项目是纯 vibe coding 产物，默认不授予任何开源许可（保留所有权利，All Rights Reserved）；如需复用请先联系作者。
+**无许可证，无任何权利保留。** 本项目是纯 vibe coding 产物，完全开放：任何人都可以随意使用、修改、分发，无任何限制。
 
 ### 🙏 致谢
 
