@@ -135,6 +135,39 @@ func testDeobfuscateInvalidBase64ReturnsNil() {
     checkNil(SessionStore.deobfuscate("not-valid-base64!!!"), "invalid base64 -> nil")
 }
 
+// ── Localization ──
+
+func testLocalizationTableComplete() {
+    let incomplete = L.missingTranslations()
+    check(incomplete.isEmpty, "every key has en + zh (missing: \(incomplete))")
+}
+
+func testLanguageDefaultsToEnglish() {
+    UserDefaults.standard.removeObject(forKey: L.languageKey)
+    checkEqual(L.current, .english, "default language is English")
+}
+
+func testLanguageSwitchSyncsSystemLanguage() {
+    let oldLanguage = UserDefaults.standard.string(forKey: L.languageKey)
+    let oldAppleLanguages = UserDefaults.standard.array(forKey: L.systemLanguageKey)
+
+    L.current = .simplifiedChinese
+    checkEqual(UserDefaults.standard.string(forKey: L.languageKey), "zh-Hans", "language preference persisted")
+    checkEqual(UserDefaults.standard.array(forKey: L.systemLanguageKey) as? [String],
+               ["zh-Hans"], "AppleLanguages kept in sync")
+
+    if let oldLanguage {
+        UserDefaults.standard.set(oldLanguage, forKey: L.languageKey)
+    } else {
+        UserDefaults.standard.removeObject(forKey: L.languageKey)
+    }
+    if let oldAppleLanguages {
+        UserDefaults.standard.set(oldAppleLanguages, forKey: L.systemLanguageKey)
+    } else {
+        UserDefaults.standard.removeObject(forKey: L.systemLanguageKey)
+    }
+}
+
 // ── Runner ──
 
 let tests: [(String, () -> Void)] = [
@@ -152,6 +185,9 @@ let tests: [(String, () -> Void)] = [
     ("SessionStore.obfuscation round trip", testObfuscationRoundTrip),
     ("SessionStore.obfuscation deterministic", testObfuscationIsDeterministic),
     ("SessionStore.deobfuscate invalid", testDeobfuscateInvalidBase64ReturnsNil),
+    ("L.table complete en+zh", testLocalizationTableComplete),
+    ("L.default English", testLanguageDefaultsToEnglish),
+    ("L.switch syncs system", testLanguageSwitchSyncsSystemLanguage),
 ]
 
 for (_, test) in tests {

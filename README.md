@@ -26,6 +26,7 @@ TermX/
 ├── Resources/
 │   ├── Info.plist
 │   └── AppIcon.icns
+├── CHANGELOG.md             # Version history / update log
 ├── Sources/
 │   ├── CPTY/                  # C bridge: forkpty / pty_spawn / winsize
 │   ├── TermXCore/             # Testable core: models, SSH auth, storage, i18n

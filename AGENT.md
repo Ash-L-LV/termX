@@ -17,7 +17,7 @@ debugging them — so they don't get re-learned the hard way.
 
 ```bash
 ./Scripts/build_app.sh     # release build → dist/TermX.app (ad-hoc signed)
-swift run TermXTests       # unit tests (lightweight runner, 25 assertions)
+swift run TermXTests       # unit tests (lightweight runner, 29 assertions)
 swift build -c release --arch arm64   # Apple Silicon only
 ```
 

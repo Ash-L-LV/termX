@@ -46,6 +46,15 @@ public enum L {
         table[key]?[current] ?? key
     }
 
+    /// Keys that are missing a translation in either supported language.
+    /// Exposed for the unit-test suite to enforce table completeness.
+    public static func missingTranslations() -> [String] {
+        table.keys.filter { key in
+            guard let pair = table[key] else { return true }
+            return pair[.english] == nil || pair[.simplifiedChinese] == nil
+        }
+    }
+
     private static let table: [String: [Language: String]] = [
         // App menu
         "about": [.english: "About TermX", .simplifiedChinese: "关于 TermX"],
