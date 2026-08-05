@@ -1,87 +1,118 @@
 # AGENT.md
 
-Working guide for **TermX** — a native macOS SSH / local terminal app
-(Swift + AppKit + SwiftTerm). This file distills the architecture and the
-hard-won constraints so future work doesn't re-trigger old bugs.
+Working guide for **TermX** — a native macOS SSH / local terminal
+(Swift + AppKit + SwiftTerm). Its job: get a fresh agent up to speed on the
+architecture, the layout, and the pitfalls that were only learned by
+debugging them — so they don't get re-learned the hard way.
 
-## Project layout
+## 1. Overview
 
-```text
-Package.swift                 SwiftPM manifest
-Sources/CPTY/                 C bridge: forkpty / pty_spawn / winsize
-Sources/TermXCore/            Testable core (public API): Models, SSHAuth,
-                              Localization (L), SessionStore, KeychainHelper
-Sources/TermX/                The app: windows, terminals, tunnels, menus, editors
-Sources/TermXTests/           Unit tests (lightweight runner, no XCTest)
-Scripts/build_app.sh          Release build → .app bundle → ad-hoc sign
-Resources/                    Info.plist, AppIcon.icns
-dist/                         Built app output (gitignored)
+- macOS 13+, **Apple Silicon (arm64)** for release builds.
+- Current version: **0.8 Beta**.
+- No Electron, no X11; SSH via the system OpenSSH (`/usr/bin/ssh`); terminal
+  emulation via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
+- Repo: `github.com/Ash-L-LV/termX` (main branch, tag `v0.8-beta`).
+
+## 2. Build / test / run
+
+```bash
+./Scripts/build_app.sh     # release build → dist/TermX.app (ad-hoc signed)
+swift run TermXTests       # unit tests (lightweight runner, 25 assertions)
+swift build -c release --arch arm64   # Apple Silicon only
 ```
 
-## Build & test
+Notes:
+- `swift test` / XCTest does **not** run on this machine — the macOS Xcode
+  install is missing the XCTest runtime frameworks (XCTestCore is absent).
+  Tests therefore live in a lightweight runner (`Sources/TermXTests`).
+- Multi-arch builds (`--arch arm64 --arch x86_64`) fail here because SwiftPM
+  needs the broken `xcbuild`. Releases are arm64-only.
+- App data: `~/Library/Application Support/TermX/sessions.json` (+ `.bak`).
 
-- Build the app: `./Scripts/build_app.sh` → `dist/TermX.app`
-- Run unit tests: `swift run TermXTests`
-- Standard `swift test`/XCTest does **not** work on this machine (the macOS
-  Xcode install is missing the XCTest runtime frameworks, e.g. XCTestCore).
-  Keep tests in the lightweight runner; the tested logic lives in `TermXCore`.
-- Release binaries are **Apple Silicon (arm64) only**: build with
-  `swift build -c release --arch arm64`. (Multi-arch `--arch arm64 --arch x86_64`
-  fails here because SwiftPM needs the broken `xcbuild`.)
+## 3. Architecture
 
-## Architecture constraints (learned the hard way — don't "improve" these)
+### Targets
 
-- **PTY backpressure**: `PTYProcess` gates the reader with an `NSCondition` +
-  an `inFlightChunks` counter (max 2). Do **not** switch to
-  `DispatchSemaphore` — GCD traps when a semaphore is deallocated while a
-  thread is waiting on it (this crashed the app).
-- **Main-thread parsing**: feed terminal output through the SwiftTerm view on
-  the main thread (SwiftTerm's view callbacks mutate the view hierarchy, e.g.
-  cursor hide). The reader paces itself instead of flooding the main queue.
-- **Feed via the view wrapper**: always call `terminalView.feed(...)`, never
-  `terminal.feed` directly — `feedFinish()` schedules the display pass that
-  moves the caret (bypassing it left the cursor stuck).
-- **Auto-login**: shared `SSHAuth.PromptMatcher` detects password/passphrase
-  prompts across chunks. The terminal strips the prompt from the display and
-  absorbs the following newline; tunnels just inject the password.
-- **Termination**: SIGHUP first, SIGKILL after 1.5s if still alive — an
-  authenticated `ssh -N` can survive SIGHUP.
-- **Window close**: closing the main window closes *all* windows and quits
-  (last-window-closed policy). Closing the last tab closes the main window.
-- **Tab detach/dock**: when dragging a tab out, remove it from the strip first
-  (the old path left a ghost tab). Dock-back is **release-based**: dragging a
-  detached window over the tab strip highlights it, but merging only happens
-  when the mouse is released there — never while just passing over.
-- **Session storage**: JSON at
-  `~/Library/Application Support/TermX/sessions.json`; passwords are obfuscated
-  (XOR+base64, not encryption); a `.bak` backup is rotated before each save.
-  Keychain is used only for one-time migration from older builds.
+| Target | Kind | Role |
+| --- | --- | --- |
+| `CPTY` | C | `forkpty` / `pty_spawn` / `winsize` bridge |
+| `TermXCore` | library (public API) | Models, SSHAuth, Localization, SessionStore, KeychainHelper — all testable logic |
+| `TermX` | executable | the app |
+| `TermXTests` | executable | test runner |
 
-## Localization
+### Code map (`Sources/TermX`)
 
-- All user-facing strings go through `L.t("key")`
-  (`Sources/TermXCore/Localization.swift`), English default + Simplified Chinese.
-- Menus are rebuilt when the language changes — keep every title localized.
-- New keys must be added to the `L.table` dictionary in **both** languages.
+| File | Role |
+| --- | --- |
+| `main.swift` / `AppDelegate.swift` | Entry, menu, lifecycle, menu actions |
+| `TerminalManager.swift` | Central coordinator: windows, tabs, sessions, tunnels, popover |
+| `MainWindowController.swift` | Main window; closing it closes **all** windows |
+| `TerminalTabViewController.swift` / `TabBarView.swift` | Tab strip, tab lifecycle, drop-target highlight |
+| `TerminalViewController.swift` | One terminal tab: SwiftTerm view + PTY + auth prompt strip + theme/opacity |
+| `PTYProcess.swift` | PTY child, bounded-backpressure reader, termination |
+| `DetachedWindowController.swift` | Dragged-out window + drag-to-dock tracking |
+| `TunnelProcess.swift` | Background `ssh -N` tunnel with auth injection |
+| `TunnelsWindowController.swift` | Tunnels window + "New Tunnel" sheet |
+| `SessionEditorViewController.swift` | Session edit sheet (auth, colors, forwards) |
+| `PortForwardEditorViewController.swift` | Forwarding-rule editor (standalone window) |
+| `SessionManagerWindowController.swift` / `SessionListViewController.swift` | Session manager window / reusable server list |
+| `MenuBuilder.swift` | Programmatic localized menu |
+| `Theme.swift` | Theme store + built-in schemes |
+| `TermXTerminalView.swift` | Right-click copies selection |
 
-## Conventions
+## 4. UI & layout notes
 
-- Every file has a doc comment explaining its role; tricky concurrency/signaling
-  code requires comments (they encode the debugging history).
-- Testable logic stays in `TermXCore` with `public` API (shared by app + tests).
-- App icon: `image.png` is the source; `Resources/AppIcon.icns` is generated
-  (iconutil) and **must remain committed** — the build script copies it.
-- Never commit real user data (server names, IPs, passwords, machine names);
-  README screenshots use fictional data.
+- Setting `window.contentViewController` resizes the window to the VC view's
+  initial frame — always follow with `window.setContentSize(...)`.
+- A single-column `NSTableView` does not stretch automatically: call
+  `tableView.sizeLastColumnToFit()` from `viewDidLayout` (or a layout hook).
+- **Do not override `hitTest` on tab items** — an old override claimed clicks
+  outside its bounds and broke tab switching (and the ＋ button).
+- Tab items must be **added as subviews** — storing them in an array alone
+  leaves them invisible.
+- Avoid sheet-on-sheet: presenting a sheet from inside a sheet is unreliable.
+  Use standalone windows instead (e.g. the port-forwarding editor).
+- Main window title follows the active tab's alias.
 
-## Release process
+## 5. Known pitfalls & technical points
 
-1. Bump the version: `Resources/Info.plist` (`CFBundleShortVersionString`) and
-   the About text in `Localization.swift`.
-2. Build arm64, assemble with `build_app.sh`, zip:
+| Symptom | Root cause | Rule |
+| --- | --- | --- |
+| App crashes when releasing a tab/pty | `DispatchSemaphore` deallocated while a thread waits | Gate the reader with `NSCondition` |
+| Cursor stuck at top-left | feeding `terminal.feed` directly skips `feedFinish()` | Always feed via `terminalView.feed(...)` |
+| tmux crashes | SwiftTerm view callbacks mutate views off-main | Parse on the main thread; reader paces itself |
+| `ssh -N` survives stop | authenticated ssh swallows SIGHUP | SIGHUP, then SIGKILL after 1.5 s |
+| Ghost tab left in main window | tab not removed from the strip before detaching | `detach(vc)` first, then open the window |
+| Drag over tab strip merges instantly | dock decided on every `windowDidMove` | Merge only on mouse release (`pressedMouseButtons`); highlight while hovering |
+| Tunnel state stuck "Running" | reader blocked after 2 chunks (no slot release) | Call `pty.processedChunk()` after each chunk |
+| Table text clipped | fixed column width | `sizeLastColumnToFit` + autoresizing |
+| Window opens at the wrong size | `contentViewController` resizes the window | `setContentSize` after assignment |
+| Old `sessions.json` fails to decode | new non-optional Codable field | Keep new fields optional (`forwards: [PortForward]?`) |
+| Dock icon won't refresh | icon cache | `killall iconservicesagent`, restart Dock / logout |
+
+## 6. Localization
+
+- Every user-facing string goes through `L.t("key")`
+  (`Sources/TermXCore/Localization.swift`); default English, plus 简体中文.
+- Menus are rebuilt when the language changes — keep all titles localized.
+- New keys must be added in **both** languages to `L.table`.
+
+## 7. Data & privacy
+
+- Passwords are obfuscated (XOR + base64, not encryption) inside
+  `sessions.json`; a `.bak` backup is rotated before each save.
+- Keychain is used only for one-time migration from older builds.
+- **Never commit real user data** (server names, IPs, passwords, machine
+  names); README screenshots use fictional data.
+
+## 8. Release process
+
+1. Bump version: `Resources/Info.plist` (`CFBundleShortVersionString`) and the
+   About text in `Localization.swift`.
+2. Build arm64 → assemble with `build_app.sh` → zip:
    `ditto -c -k --sequesterRsrc --keepParent dist/TermX.app dist/TermX-<ver>-macOS-arm64.zip`
-3. Publish: `gh release create <tag> <zip> --notes "…"` — **release notes in English**.
+3. `gh release create <tag> <zip> --notes "…"` — **notes in English**.
 
-The build is ad-hoc signed and **not notarized** — recipients may need to
-right-click → Open once. Developer ID signing + notarization requires a paid
+The build is ad-hoc signed and **not notarized** — recipients may need
+right-click → Open once. Developer ID + notarization would require a paid
 Apple Developer account (not configured).
