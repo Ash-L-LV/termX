@@ -209,6 +209,7 @@ No — it is obfuscated, but that is basic protection only. Use your own Keychai
 
 - [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) — terminal emulation core
 - Apple Swift / AppKit / Metal ecosystem
+- Special thanks to **DeepSeek** — for doing most of the thinking — and to **Ash**, for footing the token bill. 😄
 
 ---
 
@@ -414,3 +415,4 @@ SFTP 文件传输计划在下个版本提供；端口转发现在已经支持。
 
 - [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) —— 终端模拟核心
 - Apple Swift / AppKit / Metal 生态
+- 特别致谢 **DeepSeek**——贡献了绝大部分思考；以及 **Ash**——贡献了绝大部分 token 账单。😂
