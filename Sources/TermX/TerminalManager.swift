@@ -191,6 +191,8 @@ final class TerminalManager: NSObject {
         panel.nameFieldStringValue = "TermX-\(dateFormatter.string(from: Date())).log"
         panel.title = L.t("exportTitle")
         panel.message = L.t("exportMsg")
+        panel.prompt = L.t("save")
+        panel.nameFieldLabel = L.t("saveAs")
 
         let window = NSApp.keyWindow ?? mainWindow?.window
         guard let window else { return }

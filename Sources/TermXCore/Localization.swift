@@ -17,6 +17,13 @@ public enum Language: String, CaseIterable {
 /// available and can be switched from the app menu.
 public enum L {
     public static let languageKey = "TermX.language"
+    /// Key that tells AppKit which language to use for system-provided UI
+    /// (save/open panel service, standard controls). Kept in sync with the
+    /// in-app language so the system parts follow the app, not macOS.
+    /// Note: NSSavePanel/NSOpenPanel run in a separate XPC process whose
+    /// cancel button can't be retitled at runtime; the action button is
+    /// localized through `prompt` instead.
+    public static let systemLanguageKey = "AppleLanguages"
 
     public static var current: Language {
         get {
@@ -25,7 +32,14 @@ public enum L {
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: languageKey)
+            applySystemLanguage()
         }
+    }
+
+    /// Applies the current language to system-provided UI. Called at launch
+    /// (so system UI defaults to English) and on every language switch.
+    public static func applySystemLanguage() {
+        UserDefaults.standard.set([current.rawValue], forKey: systemLanguageKey)
     }
 
     public static func t(_ key: String) -> String {
@@ -125,6 +139,7 @@ public enum L {
         "placeholderPassword": [.english: "Login password", .simplifiedChinese: "登录密码"],
         "cancel": [.english: "Cancel", .simplifiedChinese: "取消"],
         "save": [.english: "Save", .simplifiedChinese: "保存"],
+        "saveAs": [.english: "Save As:", .simplifiedChinese: "存储为："],
         "browse": [.english: "Choose…", .simplifiedChinese: "选择…"],
         "chooseKey": [.english: "Choose SSH private key file", .simplifiedChinese: "选择 SSH 私钥文件"],
         "incomplete": [.english: "Incomplete Information", .simplifiedChinese: "信息不完整"],
@@ -150,8 +165,10 @@ public enum L {
         "localShell": [.english: "Local shell", .simplifiedChinese: "本地 shell"],
         "localSession": [.english: "Local", .simplifiedChinese: "本地"],
         "endedSuffix": [.english: " (ended)", .simplifiedChinese: " (已结束)"],
-        "aboutText": [.english: "Native SSH / local terminal for macOS\nVersion 0.8 Beta\nSwift + SwiftTerm",
-                      .simplifiedChinese: "macOS 原生 SSH / 本地终端\n版本 0.8 Beta\nSwift + SwiftTerm"],
+        "aboutText": [.english: "Native SSH / local terminal for macOS\nVersion 0.9\nSwift + SwiftTerm",
+                      .simplifiedChinese: "macOS 原生 SSH / 本地终端\n版本 0.9\nSwift + SwiftTerm"],
+        "aboutRepo": [.english: "GitHub: https://github.com/Ash-L-LV/termX",
+                      .simplifiedChinese: "GitHub：https://github.com/Ash-L-LV/termX"],
 
         // Port forwarding
         "tunnels": [.english: "Tunnels", .simplifiedChinese: "隧道"],

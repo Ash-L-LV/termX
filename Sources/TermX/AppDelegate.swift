@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var sharedManager: TerminalManager? { manager }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        L.applySystemLanguage()
         manager = TerminalManager()
         NSApp.mainMenu = MenuBuilder.makeMainMenu(delegate: self)
         manager.showMainWindow()
@@ -111,7 +112,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showAbout(_ sender: Any?) {
         let alert = NSAlert()
         alert.messageText = "TermX"
-        alert.informativeText = L.t("aboutText")
+        alert.informativeText = L.t("aboutText") + "\n" + L.t("aboutRepo")
+        alert.accessoryView = AboutView.makeLinkField(text: L.t("aboutRepo"))
         alert.addButton(withTitle: L.t("ok"))
         alert.runModal()
     }

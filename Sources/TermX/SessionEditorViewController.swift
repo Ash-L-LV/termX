@@ -200,6 +200,7 @@ final class SessionEditorViewController: NSViewController {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.message = L.t("chooseKey")
+        panel.prompt = L.t("browse")
         if panel.runModal() == .OK, let url = panel.url {
             keyPathField.stringValue = url.path
         }

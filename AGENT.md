@@ -8,10 +8,10 @@ debugging them — so they don't get re-learned the hard way.
 ## 1. Overview
 
 - macOS 13+, **Apple Silicon (arm64)** for release builds.
-- Current version: **0.8 Beta**.
+- Current version: **0.9**.
 - No Electron, no X11; SSH via the system OpenSSH (`/usr/bin/ssh`); terminal
   emulation via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
-- Repo: `github.com/Ash-L-LV/termX` (main branch, tag `v0.8-beta`).
+- Repo: `github.com/Ash-L-LV/termX` (main branch, tag `v0.9`).
 
 ## 2. Build / test / run
 
@@ -96,6 +96,10 @@ Notes:
   (`Sources/TermXCore/Localization.swift`); default English, plus 简体中文.
 - Menus are rebuilt when the language changes — keep all titles localized.
 - New keys must be added in **both** languages to `L.table`.
+- System panels (Save/Open) can only have their action button retitled at
+  runtime via `panel.prompt` (+ `nameFieldLabel`); the Cancel button lives in
+  a separate XPC process and can't be retitled — it follows the launch-time
+  `AppleLanguages` we keep in sync with the in-app language.
 
 ## 7. Data & privacy
 
