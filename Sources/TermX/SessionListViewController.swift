@@ -48,7 +48,7 @@ final class SessionListViewController: NSViewController, NSTableViewDataSource, 
     /// otherwise double-click connects (Session Manager window).
     var connectOnSingleClick = false
     /// When false, the add/edit/delete button bar is hidden (＋ popover is a
-    /// pure connection picker; management lives in the 服务器 menu).
+    /// pure connection picker; management lives in the Server menu).
     var showManagementBar = true
 
     private var sessions: [Session] { store.sessions }
