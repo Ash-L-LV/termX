@@ -69,7 +69,7 @@ public final class SessionStore {
             let data = try encoder.encode(encodable)
             try data.write(to: Self.fileURL, options: .atomic)
         } catch {
-            NSLog("TermX: 保存会话失败: \(error)")
+            NSLog("TermX: failed to save sessions: \(error)")
         }
     }
 
